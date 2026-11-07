@@ -82,7 +82,7 @@ export function SizePicker({
                       <View style={{ flex: 1 }}>
                         <Text style={type.body}>{item.name}</Text>
                         <Text style={type.caption}>
-                          {item.lengthIn}" × {item.ringGauge}
+                          {item.lengthIn}&quot; × {item.ringGauge}
                           {item.shape ? ` · ${item.shape}` : ''}
                         </Text>
                       </View>

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Segmented } from '../../components/Segmented';
 import { SizePicker } from '../../components/SizePicker';
@@ -36,15 +36,30 @@ export default function Verify() {
   const [vendor, setVendor] = useState('');
   const [busy, setBusy] = useState(false);
 
+  // Choosing a candidate fills the editable fields and clears the size.
+  const select = useCallback((list: CigarCandidate[], i: number) => {
+    setIndex(i);
+    setBrand(list[i]?.brand ?? '');
+    setLine(list[i]?.line ?? '');
+    setVitola(undefined);
+  }, []);
+  const showCandidates = useCallback(
+    (list: CigarCandidate[]) => {
+      setCandidates(list);
+      select(list, 0);
+    },
+    [select],
+  );
+
   useEffect(() => {
     if (params.queueId)
       void getQueueItem(Number(params.queueId)).then((q) => {
         setItem(q);
-        setCandidates(q?.result?.candidates ?? []);
+        showCandidates(q?.result?.candidates ?? []);
       });
     else if (params.cigarId)
-      void getCigar(Number(params.cigarId)).then((c) => c && setCandidates([{ ...c, confidence: 1 }]));
-  }, [params.queueId, params.cigarId]);
+      void getCigar(Number(params.cigarId)).then((c) => c && showCandidates([{ ...c, confidence: 1 }]));
+  }, [params.queueId, params.cigarId, showCandidates]);
 
   useEffect(() => {
     let live = true;
@@ -55,19 +70,13 @@ export default function Verify() {
   }, [query]);
 
   const candidate = candidates[index] ?? BLANK;
-  useEffect(() => {
-    setBrand(candidate.brand);
-    setLine(candidate.line);
-    setVitola(undefined);
-  }, [candidate]);
 
   const cigar = useMemo(() => ({ ...candidate, brand: brand.trim(), line: line.trim() }), [candidate, brand, line]);
   const named = !!cigar.brand && !!cigar.line;
   const fromQueue = item && item.id >= 0 ? item.id : undefined;
 
   const choose = (c: CigarCandidate) => {
-    setCandidates((prev) => [c, ...prev.filter((p) => p.brand !== c.brand || p.line !== c.line)]);
-    setIndex(0);
+    showCandidates([c, ...candidates.filter((p) => p.brand !== c.brand || p.line !== c.line)]);
     setQuery('');
   };
 
@@ -123,7 +132,7 @@ export default function Verify() {
         <View style={{ marginBottom: space.lg }}>
           <SectionLabel>Best matches</SectionLabel>
           {candidates.map((c, i) => (
-            <Pressable key={`${c.brand}-${c.line}`} onPress={() => setIndex(i)} style={[styles.candidate, i === index && styles.candidateOn]}>
+            <Pressable key={`${c.brand}-${c.line}`} onPress={() => select(candidates, i)} style={[styles.candidate, i === index && styles.candidateOn]}>
               <Ionicons name={i === index ? 'radio-button-on' : 'radio-button-off'} size={20} color={i === index ? colors.brass : colors.textFaint} />
               <View style={{ flex: 1 }}>
                 <Text style={type.body}>
@@ -167,7 +176,7 @@ export default function Verify() {
         <SectionLabel>Size (vitola)</SectionLabel>
         <SizePicker vitolas={candidate.vitolas} value={vitola} onChange={setVitola} />
         <Text style={[type.caption, { marginTop: space.sm }]}>
-          The band doesn't show size.{' '}
+          The band doesn&apos;t show size.{' '}
           {candidate.vitolas.length ? `${candidate.vitolas.length} sizes are listed for this line.` : 'Add yours with "Size not listed…".'}
         </Text>
       </View>

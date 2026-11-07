@@ -24,17 +24,22 @@ identifier is pluggable (local matcher today, remote service later).
 - **Retailers:** Cigars International, Famous Smoke Shop, JR Cigar, Cigar Page,
   Pipes and Cigars. Traffic sources (Similarweb, Semrush, Grips) disagree on
   order; Best Cigar Prices, Atlantic Cigar and Holt's are close alternates.
-  Links open a site-restricted Google search until each site's own search URL
-  is confirmed (one line each in `src/data/retailers.ts`).
-- **Prices:** no free retailer price API exists. Phase 1 uses link-outs and
-  records what you paid. Automated price checks would mean scraping retailer
-  pages (fragile, and against most sites' terms) — deferred.
+  Direct search links for all five; CigarBid still uses a Google site search
+  until its search URL is known (one line in `src/data/retailers.ts`).
+- **Prices:** no retailer offers a price API, and all five retailers plus
+  CigarBid sit behind bot protection (Cloudflare, Incapsula, Fastly challenge
+  pages) that blocks automated page reads. The app therefore doesn't scrape:
+  each wishlist item shows a row per retailer where you record the single-stick
+  price after tapping "Check" (which opens that store's search for the exact
+  cigar and size), with the date checked and the best price starred. If a
+  retailer or price-comparison service with an API or affiliate feed turns up,
+  it plugs into the same rows.
 - **Humidor:** Cigar Oasis offers no API, so a DIY ESP32 + SHT45 sensor logs to
   the Sheet and sends its own ntfy push alerts. Off-the-shelf alternative with
   an API: SensorPush HT1 + G1 gateway (~$150).
 
 ## Next up
-- Confirm each retailer's and CigarBid's search URL for direct links.
+- Confirm CigarBid's search URL for a direct link.
 - Seed the shared catalog with the cigars you smoke most (paste into the Sheet).
 - Photo of a tin label → match against a pipe-tobacco catalog tab (same as cigars).
 - Pipe-tobacco tab in the Sheet; friends' catalog contributions review queue.

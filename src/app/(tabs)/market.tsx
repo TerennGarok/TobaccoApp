@@ -1,13 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, Screen, SectionLabel } from '../../components/ui';
+import { WishCard } from '../../components/WishCard';
 import { CIGARBID, openShop, RETAILERS, type Shop } from '../../data/retailers';
 import { getReviews, searchCigars } from '../../db';
 import { addWish, listWishes, removeWish, type WishItem } from '../../db/wishlist';
 import { aggregate } from '../../lib/aggregate';
-import { catalogKey } from '../../lib/catalogFormat';
+import { type CatalogEntry, catalogKey } from '../../lib/catalogFormat';
 import { type Liked, recommend, type Recommendation } from '../../lib/recommend';
 import { loadCatalog } from '../../services/catalog';
 import { colors, radius, space, type } from '../../theme';
@@ -16,6 +17,7 @@ export default function Market() {
   const [wishes, setWishes] = useState<WishItem[]>([]);
   const [recs, setRecs] = useState<Recommendation[]>([]);
   const [query, setQuery] = useState('');
+  const [catalog, setCatalog] = useState<Map<string, CatalogEntry>>(new Map());
 
   const load = useCallback(() => {
     void (async () => {
@@ -34,7 +36,9 @@ export default function Market() {
         });
       }
       const smoked = new Set(mine.filter((m) => m.reviewCount > 0).map((m) => catalogKey(m.brand, m.line)));
-      setRecs(recommend(await loadCatalog(), liked, smoked));
+      const all = await loadCatalog();
+      setCatalog(new Map(all.map((e) => [catalogKey(e.brand, e.line), e])));
+      setRecs(recommend(all, liked, smoked));
     })();
   }, []);
   useFocusEffect(load);
@@ -53,22 +57,16 @@ export default function Market() {
         {query.trim() ? <ShopLinks query={query.trim()} /> : null}
       </Card>
 
-      <SectionLabel>Wishlist</SectionLabel>
+      <SectionLabel>Wishlist · prices</SectionLabel>
       {wishes.length ? (
         wishes.map((w) => (
-          <Card key={w.id}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: space.md }}>
-              <Pressable style={{ flex: 1 }} disabled={!w.cigarId} onPress={() => router.push(`/cigar/${w.cigarId}`)}>
-                <Text style={type.caption}>{w.brand}</Text>
-                <Text style={type.heading}>{w.name}</Text>
-                {w.note ? <Text style={type.caption}>{w.note}</Text> : null}
-              </Pressable>
-              <Pressable hitSlop={8} accessibilityLabel="Remove from wishlist" onPress={() => void removeWish(w.id).then(load)}>
-                <Ionicons name="close" size={20} color={colors.textFaint} />
-              </Pressable>
-            </View>
-            <ShopLinks query={`${w.brand} ${w.name}`} pipe={w.kind === 'pipe'} />
-          </Card>
+          <WishCard
+            key={w.id}
+            wish={w}
+            vitolas={catalog.get(catalogKey(w.brand, w.name))?.vitolas ?? []}
+            onChange={load}
+            onRemove={() => void removeWish(w.id).then(load)}
+          />
         ))
       ) : (
         <Text style={[type.caption, { marginBottom: space.xl }]}>Tap the heart on any cigar to save it here.</Text>

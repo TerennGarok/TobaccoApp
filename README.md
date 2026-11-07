@@ -30,7 +30,10 @@ used; flavor notes; cellar inventory by the ounce.
 **Inventory** — stock by size, price paid, vendor, resting/cellar age, total
 value; logging a smoke deducts one automatically (toggle on the notes page).
 
-**Market** — wishlist, "Try next" recommendations (similar flavor/body/wrapper
+**Market** — wishlist as a price board: one row per retailer with the
+single-stick price for your chosen size, when it was checked, and the best
+price starred; "Check" opens that store's search for the exact cigar + size.
+Also "Try next" recommendations (similar flavor/body/wrapper
 to cigars you rated 4★+), and one-tap links to **CigarBid** and the top five
 retailers (Cigars International, Famous Smoke Shop, JR Cigar, Cigar Page,
 Pipes and Cigars).
@@ -50,14 +53,20 @@ npx expo start          # Expo Go on your phone, or press w for the web
 npm run typecheck
 ```
 
-On-device band reading needs a **development build** (Expo Go doesn't include
-the text-recognition module). Until then the verify screen lets you type what
-the band says. Build for your own phone for free:
+### Install on your Android phone (free)
+
+On-device band reading needs the installed app (Expo Go doesn't include the
+text-recognition module). Build an APK in Expo's cloud — free tier, no Android
+Studio needed:
 
 ```bash
-npx eas-cli@latest build --profile development --platform android   # installable APK
-npx eas-cli@latest build --profile development --platform ios       # needs an Apple Developer account
+npx eas-cli@latest login            # free Expo account
+npx eas-cli@latest build --profile preview --platform android
 ```
+
+When the build finishes (≈10–20 min) open the link it prints on your phone,
+download the APK and install it (allow "install unknown apps" for your
+browser when Android asks). Friends can install the same APK.
 
 ## Set-up checklist
 

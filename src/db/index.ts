@@ -107,6 +107,15 @@ const MIGRATIONS: string[] = [
      json TEXT NOT NULL,
      updated_at TEXT NOT NULL
    );`,
+  // v3: wishlist size + single-stick price per retailer
+  `ALTER TABLE wishlist ADD COLUMN vitola_json TEXT;
+   CREATE TABLE IF NOT EXISTS wish_prices (
+     wish_id INTEGER NOT NULL REFERENCES wishlist(id) ON DELETE CASCADE,
+     shop_id TEXT NOT NULL,
+     price REAL NOT NULL,
+     checked_at TEXT NOT NULL,
+     PRIMARY KEY (wish_id, shop_id)
+   );`,
 ];
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {

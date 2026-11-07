@@ -131,7 +131,7 @@ export default function Settings() {
         </View>
         <Field label="ntfy topic (for away alerts)" value={s.ntfyTopic} onChangeText={(v) => set('ntfyTopic', v.trim())} autoCapitalize="none" placeholder="e.g. humidor-7f3k9q" />
         <Text style={type.caption}>
-          Put the same limits and topic in the sensor's config. Install the free ntfy app and subscribe to the topic to get alerts even
+          Put the same limits and topic in the sensor&apos;s config. Install the free ntfy app and subscribe to the topic to get alerts even
           when this app is closed. Use a long random topic name — anyone who knows it can read it.
         </Text>
       </Card>

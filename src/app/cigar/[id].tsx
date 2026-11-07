@@ -44,7 +44,7 @@ export default function CigarProfile() {
   const onHand = lots.reduce((s, l) => s + l.quantity, 0);
   const toggleWish = async () => {
     if (wishId) await removeWish(wishId);
-    else await addWish({ kind: 'cigar', brand: cigar.brand, name: cigar.line, cigarId: cigar.id });
+    else await addWish({ kind: 'cigar', brand: cigar.brand, name: cigar.line, cigarId: cigar.id, vitola: reviews[0]?.vitola });
     load();
   };
 
@@ -131,7 +131,7 @@ export default function CigarProfile() {
         </View>
         {expectedNotTasted.length ? (
           <>
-            <Text style={[type.caption, { marginBottom: space.sm }]}>Expected, but you haven't noted:</Text>
+            <Text style={[type.caption, { marginBottom: space.sm }]}>Expected, but you haven&apos;t noted:</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginBottom: space.md }}>
               {expectedNotTasted.map((s) => (
                 <FlavorChip key={s.noteId} label={noteLabel(s.noteId)} selected={false} source={s.source} />

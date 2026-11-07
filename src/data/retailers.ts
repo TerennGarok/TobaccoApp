@@ -4,9 +4,8 @@
 // (Similarweb, Semrush, Grips Intelligence, 2026), with Pipes and Cigars for
 // pipe tobacco. The sources disagree on exact order, so swap freely.
 //
-// Links open a Google search limited to each site, which reliably lands on
-// product pages. Each site's own search URL couldn't be confirmed from the
-// build environment; once confirmed, set `searchUrl` for a direct link.
+// Retailer search URLs were captured from each site. CigarBid's isn't known
+// yet, so it falls back to a Google search limited to cigarbid.com.
 import * as WebBrowser from 'expo-web-browser';
 import { Linking } from 'react-native';
 
@@ -22,11 +21,11 @@ export interface Shop {
 export const CIGARBID: Shop = { id: 'cigarbid', name: 'CigarBid', domain: 'cigarbid.com' };
 
 export const RETAILERS: Shop[] = [
-  { id: 'ci', name: 'Cigars International', domain: 'cigarsinternational.com' },
-  { id: 'famous', name: 'Famous Smoke Shop', domain: 'famous-smoke.com', pipe: true },
-  { id: 'jr', name: 'JR Cigar', domain: 'jrcigars.com' },
-  { id: 'cigarpage', name: 'Cigar Page', domain: 'cigarpage.com' },
-  { id: 'pac', name: 'Pipes and Cigars', domain: 'pipesandcigars.com', pipe: true },
+  { id: 'ci', name: 'Cigars International', domain: 'cigarsinternational.com', searchUrl: 'https://www.cigarsinternational.com/search/?q={q}' },
+  { id: 'famous', name: 'Famous Smoke Shop', domain: 'famous-smoke.com', searchUrl: 'https://www.famous-smoke.com/catalogsearch/result/?q={q}', pipe: true },
+  { id: 'jr', name: 'JR Cigar', domain: 'jrcigars.com', searchUrl: 'https://www.jrcigars.com/search?lang=en_US&q={q}' },
+  { id: 'cigarpage', name: 'Cigar Page', domain: 'cigarpage.com', searchUrl: 'https://www.cigarpage.com/catalogsearch/result/?q={q}' },
+  { id: 'pac', name: 'Pipes and Cigars', domain: 'pipesandcigars.com', searchUrl: 'https://www.pipesandcigars.com/search/?q={q}', pipe: true },
 ];
 
 export function shopUrl(shop: Shop, query: string): string {

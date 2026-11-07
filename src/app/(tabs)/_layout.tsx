@@ -3,9 +3,12 @@ import { router, Tabs } from 'expo-router';
 import { Pressable } from 'react-native';
 import { colors, fonts } from '../../theme';
 
-const icon =
-  (name: keyof typeof Ionicons.glyphMap) =>
-  ({ color, size }: { color: import('react-native').ColorValue; size: number }) => <Ionicons name={name} color={color as string} size={size} />;
+function icon(name: keyof typeof Ionicons.glyphMap) {
+  function TabIcon({ color, size }: { color: import('react-native').ColorValue; size: number }) {
+    return <Ionicons name={name} color={color as string} size={size} />;
+  }
+  return TabIcon;
+}
 
 export default function TabsLayout() {
   return (
