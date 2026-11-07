@@ -1,0 +1,93 @@
+// A small built-in catalog used by the offline "demo" identifier, so the full
+// flow can be exercised without a backend. Live identification (server/)
+// replaces this with web-sourced data, including every current vitola.
+import type { CigarCandidate } from '../lib/types';
+
+export const SAMPLE_CATALOG: CigarCandidate[] = [
+  {
+    brand: 'Padrón',
+    line: '1964 Anniversary Series Maduro',
+    manufacturer: 'Padrón Cigars',
+    wrapper: 'Nicaraguan Maduro',
+    binder: 'Nicaraguan',
+    filler: 'Nicaraguan',
+    origin: 'Nicaragua',
+    strength: 'medium-full',
+    description: 'Box-pressed, all-Nicaraguan puro aged a minimum of four years.',
+    vitolas: [
+      { name: 'Principe', lengthIn: 4.5, ringGauge: 46, shape: 'box-pressed' },
+      { name: 'Hermoso', lengthIn: 4, ringGauge: 56, shape: 'box-pressed' },
+      { name: 'Belicoso', lengthIn: 5, ringGauge: 52, shape: 'belicoso' },
+      { name: 'Exclusivo', lengthIn: 5.5, ringGauge: 50, shape: 'box-pressed' },
+      { name: 'Imperial', lengthIn: 6, ringGauge: 54, shape: 'box-pressed' },
+      { name: 'Torpedo', lengthIn: 6, ringGauge: 52, shape: 'torpedo' },
+      { name: 'Monarca', lengthIn: 6.5, ringGauge: 46, shape: 'box-pressed' },
+      { name: 'Diplomatico', lengthIn: 7, ringGauge: 50, shape: 'box-pressed' },
+    ],
+    flavorSuggestions: [
+      { noteId: 'cocoa', source: 'both' },
+      { noteId: 'coffee', source: 'both' },
+      { noteId: 'earth', source: 'manufacturer' },
+      { noteId: 'black-pepper', source: 'reviews' },
+      { noteId: 'leather', source: 'reviews' },
+      { noteId: 'molasses', source: 'reviews' },
+    ],
+    externalReviews: [
+      { source: 'Sample critic', score: 94, scale: 100, summary: 'Dense cocoa and espresso with a sweet, earthy finish.' },
+      { source: 'Sample community average', score: 4.6, scale: 5 },
+    ],
+    confidence: 0.9,
+  },
+  {
+    brand: 'Arturo Fuente',
+    line: 'Hemingway',
+    manufacturer: 'Tabacalera A. Fuente',
+    wrapper: 'Cameroon',
+    binder: 'Dominican',
+    filler: 'Dominican',
+    origin: 'Dominican Republic',
+    strength: 'mild-medium',
+    description: 'Classic perfecto-tipped line with an African Cameroon wrapper.',
+    vitolas: [
+      { name: 'Short Story', lengthIn: 4, ringGauge: 49, shape: 'perfecto' },
+      { name: 'Best Seller', lengthIn: 4.5, ringGauge: 55, shape: 'perfecto' },
+      { name: 'Signature', lengthIn: 6, ringGauge: 47, shape: 'perfecto' },
+      { name: 'Classic', lengthIn: 7, ringGauge: 48, shape: 'perfecto' },
+      { name: 'Masterpiece', lengthIn: 9, ringGauge: 52, shape: 'perfecto' },
+    ],
+    flavorSuggestions: [
+      { noteId: 'cedar', source: 'both' },
+      { noteId: 'cream', source: 'reviews' },
+      { noteId: 'almond', source: 'reviews' },
+      { noteId: 'baking-spice', source: 'manufacturer' },
+      { noteId: 'toast', source: 'reviews' },
+    ],
+    externalReviews: [{ source: 'Sample community average', score: 4.4, scale: 5 }],
+    confidence: 0.85,
+  },
+  {
+    brand: 'Oliva',
+    line: 'Serie V',
+    manufacturer: 'Oliva Cigar Co.',
+    wrapper: 'Ecuadorian Habano Sun Grown',
+    binder: 'Nicaraguan',
+    filler: 'Nicaraguan (Jalapa ligero)',
+    origin: 'Nicaragua',
+    strength: 'full',
+    vitolas: [
+      { name: 'Double Robusto', lengthIn: 5, ringGauge: 54 },
+      { name: 'Torpedo', lengthIn: 6.5, ringGauge: 52, shape: 'torpedo' },
+      { name: 'Double Toro', lengthIn: 6, ringGauge: 60 },
+      { name: 'Churchill Extra', lengthIn: 7, ringGauge: 50 },
+    ],
+    flavorSuggestions: [
+      { noteId: 'dark-chocolate', source: 'both' },
+      { noteId: 'black-pepper', source: 'both' },
+      { noteId: 'coffee', source: 'reviews' },
+      { noteId: 'leather', source: 'manufacturer' },
+      { noteId: 'earth', source: 'reviews' },
+    ],
+    externalReviews: [{ source: 'Sample community average', score: 4.5, scale: 5 }],
+    confidence: 0.8,
+  },
+];

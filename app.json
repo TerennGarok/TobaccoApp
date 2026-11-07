@@ -1,0 +1,49 @@
+{
+  "expo": {
+    "name": "Humidor",
+    "slug": "tobacco-app",
+    "scheme": "humidor",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#15100C",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.terenngarok.humidor",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Photograph cigar bands and pipe tobacco tins to identify them.",
+        "NSPhotoLibraryUsageDescription": "Choose an existing photo of a cigar band or tobacco tin."
+      }
+    },
+    "android": {
+      "package": "com.terenngarok.humidor",
+      "adaptiveIcon": {
+        "backgroundColor": "#15100C",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single"
+    },
+    "plugins": [
+      ["expo-router", { "asyncRoutes": false }],
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Photograph cigar bands and pipe tobacco tins to identify them.",
+          "photosPermission": "Choose an existing photo of a cigar band or tobacco tin."
+        }
+      ],
+      "expo-notifications"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
