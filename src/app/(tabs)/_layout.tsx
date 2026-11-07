@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Tabs } from 'expo-router';
+import { router, Tabs } from 'expo-router';
+import { Pressable } from 'react-native';
 import { colors, fonts } from '../../theme';
 
 const icon =
@@ -19,7 +20,19 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: colors.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Journal', tabBarIcon: icon('book-outline') }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Cigars',
+          tabBarIcon: icon('book-outline'),
+          headerRight: () => (
+            <Pressable accessibilityLabel="Settings" hitSlop={10} style={{ marginRight: 16 }} onPress={() => router.push('/settings')}>
+              <Ionicons name="settings-outline" size={22} color={colors.brass} />
+            </Pressable>
+          ),
+        }}
+      />
+      <Tabs.Screen name="pipe" options={{ title: 'Pipe', tabBarIcon: icon('flame-outline') }} />
       <Tabs.Screen name="inventory" options={{ title: 'Inventory', tabBarIcon: icon('file-tray-stacked-outline') }} />
       <Tabs.Screen name="humidor" options={{ title: 'Humidor', tabBarIcon: icon('water-outline') }} />
       <Tabs.Screen name="market" options={{ title: 'Market', tabBarIcon: icon('pricetags-outline') }} />

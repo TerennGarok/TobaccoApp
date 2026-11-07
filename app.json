@@ -31,7 +31,12 @@
       "output": "single"
     },
     "plugins": [
-      ["expo-router", { "asyncRoutes": false }],
+      [
+        "expo-router",
+        {
+          "asyncRoutes": false
+        }
+      ],
       "expo-sqlite",
       [
         "expo-image-picker",
@@ -40,7 +45,9 @@
           "photosPermission": "Choose an existing photo of a cigar band or tobacco tin."
         }
       ],
-      "expo-notifications"
+      "expo-notifications",
+      "expo-sharing",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": false

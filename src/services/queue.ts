@@ -8,6 +8,8 @@ import NetInfo from '@react-native-community/netinfo';
 import * as Notifications from 'expo-notifications';
 import { AppState, Platform } from 'react-native';
 import { claimPending, enqueuePhoto, setQueueResult, setQueueStatus } from '../db';
+import { autoBackupIfDue } from './backup';
+import { syncCatalog } from './catalog';
 import { identifier } from './identify';
 import { persistPhoto } from './photos';
 
@@ -41,7 +43,10 @@ export async function submitPhoto(uri: string): Promise<number> {
 }
 
 export async function drain(): Promise<void> {
-  if (draining || !(await isOnline())) return;
+  if (draining) return;
+  const online = await isOnline();
+  if (online) void syncCatalog().catch(() => undefined);
+  if (identifier.needsNetwork && !online) return;
   draining = true;
   try {
     const items = await claimPending();
@@ -84,6 +89,7 @@ export function startQueueWorker(): void {
     window.addEventListener('online', () => void drain());
   }
   void drain();
+  setTimeout(() => void autoBackupIfDue().catch(() => undefined), 5000);
 }
 
 async function notifyReady(brand?: string) {

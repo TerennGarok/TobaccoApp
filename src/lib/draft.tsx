@@ -15,6 +15,11 @@ export interface Draft {
   flavors: string[];
   suggestions: FlavorSuggestion[];
   notes: string;
+  pairing: string;
+  occasion: string;
+  durationMin?: number;
+  /** Take one stick out of inventory when saving (if you have any). */
+  deductInventory: boolean;
 }
 
 const empty = (): Draft => ({
@@ -24,6 +29,9 @@ const empty = (): Draft => ({
   flavors: [],
   suggestions: [],
   notes: '',
+  pairing: '',
+  occasion: '',
+  deductInventory: true,
 });
 
 interface Ctx {

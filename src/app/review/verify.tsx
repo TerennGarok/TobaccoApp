@@ -1,69 +1,122 @@
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Segmented } from '../../components/Segmented';
 import { SizePicker } from '../../components/SizePicker';
 import { Button, Card, Field, Row, Screen, SectionLabel, StepHeader } from '../../components/ui';
-import { getCigar, getQueueItem } from '../../db';
+import { getCigar, getQueueItem, setQueueStatus, upsertCigar } from '../../db';
+import { addLot } from '../../db/inventory';
 import { useDraft } from '../../lib/draft';
 import { type CigarCandidate, type QueueItem, STRENGTH_LABELS, type Vitola } from '../../lib/types';
+import { contribute } from '../../services/catalog';
+import { searchCatalog } from '../../services/identify';
+import { ocrAvailable } from '../../services/ocr';
 import { colors, radius, space, type } from '../../theme';
 
 const BLANK: CigarCandidate = { brand: '', line: '', vitolas: [], flavorSuggestions: [], externalReviews: [], confidence: 0 };
+type Mode = 'smoke' | 'stock';
 
 export default function Verify() {
-  // Either a freshly identified photo (queueId) or a cigar already in the journal (cigarId).
-  const { queueId, cigarId } = useLocalSearchParams<{ queueId?: string; cigarId?: string }>();
+  // A freshly identified photo (queueId), a cigar already in the journal
+  // (cigarId), or neither — manual entry. mode=stock starts on "Add to inventory".
+  const params = useLocalSearchParams<{ queueId?: string; cigarId?: string; mode?: Mode }>();
   const { begin } = useDraft();
   const [item, setItem] = useState<QueueItem | null>(null);
+  const [candidates, setCandidates] = useState<CigarCandidate[]>([]);
   const [index, setIndex] = useState(0);
   const [brand, setBrand] = useState('');
   const [line, setLine] = useState('');
   const [vitola, setVitola] = useState<Vitola>();
+  const [mode, setMode] = useState<Mode>(params.mode === 'stock' ? 'stock' : 'smoke');
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<CigarCandidate[]>([]);
+  const [qty, setQty] = useState('1');
+  const [price, setPrice] = useState('');
+  const [vendor, setVendor] = useState('');
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (queueId) void getQueueItem(Number(queueId)).then(setItem);
-    else if (cigarId)
-      void getCigar(Number(cigarId)).then((c) => {
-        if (!c) return;
-        setItem({
-          id: -1,
-          imageUri: c.imageUri ?? '',
-          status: 'ready',
-          attempts: 0,
-          createdAt: c.createdAt,
-          result: { candidates: [{ ...c, confidence: 1 }] },
-        });
+    if (params.queueId)
+      void getQueueItem(Number(params.queueId)).then((q) => {
+        setItem(q);
+        setCandidates(q?.result?.candidates ?? []);
       });
-  }, [queueId, cigarId]);
+    else if (params.cigarId)
+      void getCigar(Number(params.cigarId)).then((c) => c && setCandidates([{ ...c, confidence: 1 }]));
+  }, [params.queueId, params.cigarId]);
 
-  const candidates = item?.result?.candidates ?? [];
+  useEffect(() => {
+    let live = true;
+    void searchCatalog(query).then((r) => live && setResults(r));
+    return () => {
+      live = false;
+    };
+  }, [query]);
+
   const candidate = candidates[index] ?? BLANK;
-
-  // Selecting a different candidate resets the editable fields.
   useEffect(() => {
     setBrand(candidate.brand);
     setLine(candidate.line);
     setVitola(undefined);
   }, [candidate]);
 
-  const confirm = () => {
-    begin({ cigar: { ...candidate, brand: brand.trim(), line: line.trim() }, vitola, imageUri: item?.imageUri, queueId: item && item.id >= 0 ? item.id : undefined });
+  const cigar = useMemo(() => ({ ...candidate, brand: brand.trim(), line: line.trim() }), [candidate, brand, line]);
+  const named = !!cigar.brand && !!cigar.line;
+  const fromQueue = item && item.id >= 0 ? item.id : undefined;
+
+  const choose = (c: CigarCandidate) => {
+    setCandidates((prev) => [c, ...prev.filter((p) => p.brand !== c.brand || p.line !== c.line)]);
+    setIndex(0);
+    setQuery('');
+  };
+
+  const confirmSmoke = () => {
+    begin({ cigar, vitola, imageUri: item?.imageUri, queueId: fromQueue });
     router.push('/review/ratings');
+  };
+
+  const confirmStock = async () => {
+    setBusy(true);
+    const cigarId = await upsertCigar(cigar, item?.imageUri);
+    await addLot({
+      kind: 'cigar',
+      itemId: cigarId,
+      vitola,
+      quantity: Math.max(1, Number(qty) || 1),
+      unitPrice: Number(price) || undefined,
+      vendor: vendor.trim() || undefined,
+    });
+    if (fromQueue != null) await setQueueStatus(fromQueue, 'confirmed');
+    void contribute(cigar, vitola).catch(() => undefined);
+    router.dismissAll();
+    router.replace(`/cigar/${cigarId}`);
   };
 
   return (
     <Screen
       footer={
         <>
-          <Button title="Yes, this is my cigar" icon="checkmark" disabled={!brand.trim() || !line.trim() || !vitola} onPress={confirm} />
-          {!vitola ? <Text style={[type.caption, { textAlign: 'center' }]}>Choose a size to continue</Text> : null}
+          {mode === 'smoke' ? (
+            <Button title="Yes — rate this smoke" icon="checkmark" disabled={!named || !vitola} onPress={confirmSmoke} />
+          ) : (
+            <Button title="Add to inventory" icon="file-tray-stacked" loading={busy} disabled={!named || !vitola} onPress={() => void confirmStock()} />
+          )}
+          {named && !vitola ? <Text style={[type.caption, { textAlign: 'center' }]}>Choose a size to continue</Text> : null}
         </>
       }
     >
-      <StepHeader step={1} total={5} title="Is this your cigar?" subtitle="Confirm the brand and line, then pick the size you smoked." />
+      <StepHeader step={1} total={5} title="Is this your cigar?" subtitle="Confirm the brand and line, then pick the size." />
+      <Segmented
+        options={[
+          { value: 'smoke', label: 'I smoked it' },
+          { value: 'stock', label: 'I bought some' },
+        ]}
+        value={mode}
+        onChange={setMode}
+      />
 
-      {item?.imageUri && !cigarId ? <Image source={{ uri: item.imageUri }} style={styles.photo} /> : null}
+      {item?.imageUri && !params.cigarId ? <Image source={{ uri: item.imageUri }} style={styles.photo} /> : null}
       {item?.result?.bandText ? <Text style={[type.caption, { marginBottom: space.lg }]}>Band reads: “{item.result.bandText}”</Text> : null}
 
       {candidates.length > 1 ? (
@@ -83,6 +136,30 @@ export default function Verify() {
         </View>
       ) : null}
 
+      {!params.cigarId ? (
+        <View style={{ marginBottom: space.lg }}>
+          <Field
+            label={candidates.length ? 'Not right? Search the catalog' : 'Search the catalog'}
+            value={query}
+            onChangeText={setQuery}
+            placeholder={ocrAvailable() ? 'Type words from the band' : 'Type what the band says, e.g. "Padron 1964"'}
+            autoCapitalize="none"
+            style={{ marginBottom: 0 }}
+          />
+          {results.map((c) => (
+            <Pressable key={`${c.brand}-${c.line}`} style={styles.result} onPress={() => choose(c)}>
+              <Text style={type.body}>
+                {c.brand} <Text style={{ color: colors.textMuted }}>{c.line}</Text>
+              </Text>
+              <Text style={type.caption}>{c.vitolas.length} sizes</Text>
+            </Pressable>
+          ))}
+          {query.trim().length >= 2 && !results.length ? (
+            <Text style={[type.caption, { marginTop: space.sm }]}>Not in the catalog yet — enter it below and it will be added.</Text>
+          ) : null}
+        </View>
+      ) : null}
+
       <Field label="Brand" value={brand} onChangeText={setBrand} placeholder="e.g. Padrón" autoCapitalize="words" />
       <Field label="Line / Blend" value={line} onChangeText={setLine} placeholder="e.g. 1964 Anniversary Series Maduro" autoCapitalize="words" />
 
@@ -90,11 +167,27 @@ export default function Verify() {
         <SectionLabel>Size (vitola)</SectionLabel>
         <SizePicker vitolas={candidate.vitolas} value={vitola} onChange={setVitola} />
         <Text style={[type.caption, { marginTop: space.sm }]}>
-          The band doesn't show size. {candidate.vitolas.length ? `${candidate.vitolas.length} sizes are listed for this line.` : ''}
+          The band doesn't show size.{' '}
+          {candidate.vitolas.length ? `${candidate.vitolas.length} sizes are listed for this line.` : 'Add yours with "Size not listed…".'}
         </Text>
       </View>
 
-      {candidate.brand ? (
+      {mode === 'stock' ? (
+        <Card>
+          <SectionLabel>Purchase</SectionLabel>
+          <View style={{ flexDirection: 'row', gap: space.md }}>
+            <View style={{ flex: 1 }}>
+              <Field label="Quantity" value={qty} onChangeText={setQty} keyboardType="number-pad" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Field label="Price each ($)" value={price} onChangeText={setPrice} keyboardType="decimal-pad" placeholder="12.50" />
+            </View>
+          </View>
+          <Field label="Bought from" value={vendor} onChangeText={setVendor} placeholder="e.g. CigarBid, local shop" />
+        </Card>
+      ) : null}
+
+      {candidate.wrapper || candidate.origin ? (
         <Card>
           <SectionLabel>From the manufacturer</SectionLabel>
           <Row label="Wrapper" value={candidate.wrapper} />
@@ -122,4 +215,12 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
   },
   candidateOn: { borderColor: colors.brass, backgroundColor: colors.surface },
+  result: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: space.md,
+    borderBottomColor: colors.border,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
 });

@@ -50,6 +50,63 @@ const MIGRATIONS: string[] = [
      attempts INTEGER NOT NULL DEFAULT 0,
      created_at TEXT NOT NULL
    );`,
+  // v2: session context, inventory, wishlist, pipe tobacco, settings, shared catalog cache
+  `ALTER TABLE reviews ADD COLUMN pairing TEXT NOT NULL DEFAULT '';
+   ALTER TABLE reviews ADD COLUMN occasion TEXT NOT NULL DEFAULT '';
+   ALTER TABLE reviews ADD COLUMN duration_min INTEGER;
+   CREATE TABLE IF NOT EXISTS inventory (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL,              -- 'cigar' | 'pipe'
+     item_id INTEGER NOT NULL,        -- cigars.id or pipe_tobaccos.id
+     vitola_json TEXT,
+     quantity REAL NOT NULL,          -- sticks, or ounces for pipe tobacco
+     unit_price REAL,                 -- paid per stick / per ounce
+     vendor TEXT,
+     acquired_at TEXT NOT NULL,
+     notes TEXT NOT NULL DEFAULT ''
+   );
+   CREATE TABLE IF NOT EXISTS wishlist (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     kind TEXT NOT NULL,
+     brand TEXT NOT NULL,
+     name TEXT NOT NULL,
+     cigar_id INTEGER,
+     note TEXT NOT NULL DEFAULT '',
+     added_at TEXT NOT NULL,
+     UNIQUE (kind, brand, name)
+   );
+   CREATE TABLE IF NOT EXISTS pipe_tobaccos (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     brand TEXT NOT NULL,
+     blend TEXT NOT NULL,
+     cut TEXT,
+     components_json TEXT NOT NULL DEFAULT '[]',
+     aromatic INTEGER NOT NULL DEFAULT 0,
+     description TEXT,
+     image_uri TEXT,
+     created_at TEXT NOT NULL,
+     UNIQUE (brand, blend)
+   );
+   CREATE TABLE IF NOT EXISTS pipe_reviews (
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     tobacco_id INTEGER NOT NULL REFERENCES pipe_tobaccos(id) ON DELETE CASCADE,
+     smoked_at TEXT NOT NULL,
+     ratings_json TEXT NOT NULL,
+     strength INTEGER NOT NULL,
+     moisture INTEGER NOT NULL,
+     flavors_json TEXT NOT NULL DEFAULT '[]',
+     pipe TEXT NOT NULL DEFAULT '',
+     pairing TEXT NOT NULL DEFAULT '',
+     occasion TEXT NOT NULL DEFAULT '',
+     duration_min INTEGER,
+     notes TEXT NOT NULL DEFAULT ''
+   );
+   CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+   CREATE TABLE IF NOT EXISTS catalog_cache (
+     key TEXT PRIMARY KEY,            -- lower(brand|line)
+     json TEXT NOT NULL,
+     updated_at TEXT NOT NULL
+   );`,
 ];
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
@@ -70,8 +127,8 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
   return dbPromise;
 }
 
-const now = () => new Date().toISOString();
-const parse = <T>(s: string | null | undefined, fallback: T): T => {
+export const now = () => new Date().toISOString();
+export const parse = <T>(s: string | null | undefined, fallback: T): T => {
   if (!s) return fallback;
   try {
     return JSON.parse(s) as T;
@@ -155,6 +212,17 @@ export async function upsertCigar(c: CigarCandidate, imageUri?: string): Promise
   return res.lastInsertRowId;
 }
 
+export async function findCigarId(brand: string, line: string): Promise<number | undefined> {
+  const db = await getDb();
+  const r = await db.getFirstAsync<{ id: number }>('SELECT id FROM cigars WHERE brand = ? AND line = ?', brand, line);
+  return r?.id;
+}
+
+export async function listCigars(): Promise<Cigar[]> {
+  const db = await getDb();
+  return (await db.getAllAsync<CigarRow>('SELECT * FROM cigars ORDER BY brand, line')).map(toCigar);
+}
+
 export async function getCigar(id: number): Promise<Cigar | null> {
   const db = await getDb();
   const r = await db.getFirstAsync<CigarRow>('SELECT * FROM cigars WHERE id = ?', id);
@@ -204,6 +272,9 @@ interface ReviewRow {
   construction: number;
   draw: number;
   has_spice: number;
+  pairing: string;
+  occasion: string;
+  duration_min: number | null;
   body: number;
   flavors_json: string;
   notes: string;
@@ -217,16 +288,20 @@ export interface NewReview {
   body: number;
   flavors: string[];
   notes: string;
+  pairing: string;
+  occasion: string;
+  durationMin?: number;
 }
 
 export async function addReview(r: NewReview): Promise<number> {
   const db = await getDb();
   const res = await db.runAsync(
     `INSERT INTO reviews (cigar_id, vitola_json, smoked_at, flavor, aroma, burn, construction, draw,
-       has_spice, body, flavors_json, notes) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+       has_spice, body, flavors_json, notes, pairing, occasion, duration_min) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     r.cigarId, r.vitola ? JSON.stringify(r.vitola) : null, now(),
     r.ratings.flavor, r.ratings.aroma, r.ratings.burn, r.ratings.construction, r.ratings.draw,
     r.hasSpice ? 1 : 0, Math.round(r.body), JSON.stringify(r.flavors), r.notes,
+    r.pairing, r.occasion, r.durationMin ?? null,
   );
   return res.lastInsertRowId;
 }
@@ -247,6 +322,9 @@ export async function getReviews(cigarId: number): Promise<Review[]> {
     body: r.body,
     flavors: parse(r.flavors_json, []),
     notes: r.notes,
+    pairing: r.pairing,
+    occasion: r.occasion,
+    durationMin: r.duration_min ?? undefined,
   }));
 }
 

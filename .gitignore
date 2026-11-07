@@ -39,3 +39,4 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+hardware/humidor-sensor/config.h

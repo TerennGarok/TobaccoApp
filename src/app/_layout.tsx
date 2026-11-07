@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DraftProvider } from '../lib/draft';
+import { PipeDraftProvider } from '../lib/pipeDraft';
 import { startQueueWorker } from '../services/queue';
 import { colors, fonts } from '../theme';
 
@@ -14,6 +15,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <DraftProvider>
+        <PipeDraftProvider>
         <StatusBar style="light" />
         <Stack
           screenOptions={{
@@ -32,7 +34,13 @@ export default function RootLayout() {
           <Stack.Screen name="review/flavors" options={{ title: 'Flavors' }} />
           <Stack.Screen name="review/notes" options={{ title: 'Notes' }} />
           <Stack.Screen name="cigar/[id]" options={{ title: '' }} />
+          <Stack.Screen name="pipe/new" options={{ title: 'Pipe Tobacco' }} />
+          <Stack.Screen name="pipe/rate" options={{ title: 'Ratings' }} />
+          <Stack.Screen name="pipe/notes" options={{ title: 'Flavors & Notes' }} />
+          <Stack.Screen name="pipe/[id]" options={{ title: '' }} />
+          <Stack.Screen name="settings" options={{ title: 'Settings' }} />
         </Stack>
+        </PipeDraftProvider>
       </DraftProvider>
     </SafeAreaProvider>
   );

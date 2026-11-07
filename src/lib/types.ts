@@ -72,6 +72,9 @@ export interface Review {
   body: number;
   flavors: string[]; // note ids the smoker confirmed
   notes: string;
+  pairing: string;
+  occasion: string;
+  durationMin?: number;
 }
 
 export type QueueStatus = 'pending' | 'processing' | 'ready' | 'failed' | 'confirmed';

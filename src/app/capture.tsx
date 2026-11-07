@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Image, Platform, Text, View } from 'react-native';
 import { Button, Card, Screen } from '../components/ui';
 import { getQueueItem } from '../db';
+import { identifier } from '../services/identify';
 import { isOnline, onQueueChange, submitPhoto } from '../services/queue';
 import { colors, radius, space, type } from '../theme';
 
@@ -44,7 +45,7 @@ export default function Capture() {
     if (result.canceled || !result.assets[0]) return;
     const uri = result.assets[0].uri;
     setPreview(uri);
-    const online = await isOnline();
+    const online = !identifier.needsNetwork || (await isOnline());
     setPhase(online ? 'searching' : 'queued');
     setQueueId(await submitPhoto(uri));
   };
@@ -79,6 +80,7 @@ export default function Capture() {
 
       {phase === 'choose' ? (
         <View style={{ gap: space.sm }}>
+          <Button title="Type it in instead" icon="create-outline" variant="ghost" onPress={() => router.replace('/review/verify')} />
           {Platform.OS !== 'web' ? <Button title="Take photo" icon="camera" onPress={() => void pick('camera')} /> : null}
           <Button
             title="Choose from library"

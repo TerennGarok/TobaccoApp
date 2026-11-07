@@ -5,7 +5,8 @@ import { FlatList, Image, Pressable, StyleSheet, Text, TextInput, View } from 'r
 import { StarRating } from '../../components/ui';
 import { type CigarSummary, deleteQueueItem, listOpenQueue, searchCigars } from '../../db';
 import type { QueueItem } from '../../lib/types';
-import { isDemoIdentifier } from '../../services/identify';
+import { getSettings } from '../../db/settings';
+import { ocrAvailable } from '../../services/ocr';
 import { onQueueChange, retry } from '../../services/queue';
 import { colors, radius, space, type } from '../../theme';
 
@@ -13,11 +14,13 @@ export default function Journal() {
   const [query, setQuery] = useState('');
   const [cigars, setCigars] = useState<CigarSummary[]>([]);
   const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [hasSheet, setHasSheet] = useState(true);
 
   const load = useCallback(async () => {
-    const [c, q] = await Promise.all([searchCigars(query), listOpenQueue()]);
+    const [c, q, st] = await Promise.all([searchCigars(query), listOpenQueue(), getSettings()]);
     setCigars(c);
     setQueue(q);
+    setHasSheet(!!st.sheetUrl);
   }, [query]);
 
   useFocusEffect(
@@ -46,10 +49,15 @@ export default function Journal() {
                 returnKeyType="search"
               />
             </View>
-            {isDemoIdentifier ? (
-              <Text style={[type.caption, { marginBottom: space.md }]}>
-                Demo mode: no identification service configured — set EXPO_PUBLIC_IDENTIFY_URL.
-              </Text>
+            {!hasSheet || !ocrAvailable() ? (
+              <Pressable style={styles.hint} onPress={() => router.push('/settings')}>
+                <Ionicons name="information-circle-outline" size={18} color={colors.brass} />
+                <Text style={[type.caption, { flex: 1 }]}>
+                  {!hasSheet
+                    ? 'Connect your Google Sheet catalog in Settings so band lookups can find sizes and flavors.'
+                    : 'Band reading needs the installed app build; here, type the band text on the verify screen.'}
+                </Text>
+              </Pressable>
             ) : null}
             {queue.length ? <QueueSection items={queue} onChange={load} /> : null}
           </View>
@@ -148,6 +156,15 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderWidth: 1,
     paddingHorizontal: space.md,
+    marginBottom: space.lg,
+  },
+  hint: {
+    flexDirection: 'row',
+    gap: space.sm,
+    alignItems: 'center',
+    padding: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
     marginBottom: space.lg,
   },
   searchInput: { flex: 1, color: colors.text, fontSize: 16, paddingVertical: space.md },

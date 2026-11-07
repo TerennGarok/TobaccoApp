@@ -8,6 +8,9 @@ import { FlavorChip, SourceLegend } from '../../components/FlavorChip';
 import { Button, Card, Row, Screen, SectionLabel, StarRating } from '../../components/ui';
 import { noteLabel } from '../../data/flavors';
 import { getCigar, getReviews } from '../../db';
+import { type InventoryLot, lotsFor, restingLabel } from '../../db/inventory';
+import { addWish, isWished, removeWish } from '../../db/wishlist';
+import { CIGARBID, openShop, RETAILERS } from '../../data/retailers';
 import { aggregate } from '../../lib/aggregate';
 import { bodyLabel, type Cigar, formatVitola, RATING_FIELDS, type Review, STRENGTH_LABELS } from '../../lib/types';
 import { colors, radius, space, type } from '../../theme';
@@ -16,15 +19,18 @@ export default function CigarProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [cigar, setCigar] = useState<Cigar | null>(null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [lots, setLots] = useState<InventoryLot[]>([]);
+  const [wishId, setWishId] = useState<number | null>(null);
 
-  useFocusEffect(
-    useCallback(() => {
-      void Promise.all([getCigar(Number(id)), getReviews(Number(id))]).then(([c, r]) => {
-        setCigar(c);
-        setReviews(r);
-      });
-    }, [id]),
-  );
+  const load = useCallback(() => {
+    void Promise.all([getCigar(Number(id)), getReviews(Number(id)), lotsFor('cigar', Number(id))]).then(async ([c, r, l]) => {
+      setCigar(c);
+      setReviews(r);
+      setLots(l);
+      if (c) setWishId(await isWished('cigar', c.brand, c.line));
+    });
+  }, [id]);
+  useFocusEffect(load);
 
   if (!cigar) return <Screen>{null}</Screen>;
   const agg = aggregate(reviews);
@@ -34,6 +40,13 @@ export default function CigarProfile() {
 
   // Re-confirm size each time — you may be smoking a different vitola.
   const smokeAgain = () => router.push(`/review/verify?cigarId=${cigar.id}`);
+  const query = `${cigar.brand} ${cigar.line}`;
+  const onHand = lots.reduce((s, l) => s + l.quantity, 0);
+  const toggleWish = async () => {
+    if (wishId) await removeWish(wishId);
+    else await addWish({ kind: 'cigar', brand: cigar.brand, name: cigar.line, cigarId: cigar.id });
+    load();
+  };
 
   return (
     <Screen>
@@ -47,6 +60,17 @@ export default function CigarProfile() {
         <Text style={[type.caption, { marginTop: space.xs }]}>
           {[cigar.origin, cigar.wrapper, cigar.strength ? STRENGTH_LABELS[cigar.strength] : null].filter(Boolean).join(' · ')}
         </Text>
+      </View>
+
+      <View style={styles.actions}>
+        <Action icon="add-circle-outline" label="Log smoke" onPress={smokeAgain} />
+        <Action
+          icon="file-tray-stacked-outline"
+          label={onHand ? `${onHand} on hand` : 'Add stock'}
+          onPress={() => router.push(`/review/verify?cigarId=${cigar.id}&mode=stock`)}
+        />
+        <Action icon={wishId ? 'heart' : 'heart-outline'} label={wishId ? 'Wishlisted' : 'Wishlist'} onPress={() => void toggleWish()} active={!!wishId} />
+        <Action icon="hammer-outline" label="CigarBid" onPress={() => void openShop(CIGARBID, query)} />
       </View>
 
       {/* My verdict */}
@@ -145,6 +169,34 @@ export default function CigarProfile() {
         </Card>
       ) : null}
 
+      {/* Inventory */}
+      {lots.length ? (
+        <Card>
+          <SectionLabel>In your humidor</SectionLabel>
+          {lots.map((l) => (
+            <Row
+              key={l.id}
+              label={`${l.vitola?.name ?? 'Any size'} · resting ${restingLabel(l.acquiredAt)}`}
+              value={`${l.quantity}${l.unitPrice ? ` @ $${l.unitPrice.toFixed(2)}` : ''}`}
+            />
+          ))}
+        </Card>
+      ) : null}
+
+      {/* Shop */}
+      <Card>
+        <SectionLabel>Shop & auctions</SectionLabel>
+        <Button title="Find on CigarBid" icon="hammer" onPress={() => void openShop(CIGARBID, query)} />
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.md }}>
+          {RETAILERS.map((r) => (
+            <Pressable key={r.id} style={styles.shopChip} onPress={() => void openShop(r, query)}>
+              <Text style={{ color: colors.text, fontSize: 14 }}>{r.name}</Text>
+              <Ionicons name="open-outline" size={14} color={colors.textMuted} />
+            </Pressable>
+          ))}
+        </View>
+      </Card>
+
       {/* Specs */}
       <Card>
         <SectionLabel>Specifications</SectionLabel>
@@ -181,12 +233,18 @@ export default function CigarProfile() {
               </View>
               <StarRating value={Math.round(overall * 2) / 2} size={16} />
             </View>
+            {r.pairing || r.occasion || r.durationMin ? (
+              <Text style={[type.caption, { marginTop: space.sm }]}>
+                {[r.pairing && `with ${r.pairing}`, r.occasion, r.durationMin && `${r.durationMin} min`].filter(Boolean).join(' · ')}
+              </Text>
+            ) : null}
             {r.notes ? <Text style={[type.body, { marginTop: space.md, color: colors.textMuted }]}>{r.notes}</Text> : null}
           </Card>
         );
       })}
 
-      <Button title="Log another smoke" icon="add" onPress={smokeAgain} />
+      {!reviews.length ? <Text style={[type.caption, { marginBottom: space.lg }]}>Not smoked yet.</Text> : null}
+      <Button title="Log a smoke" icon="add" onPress={smokeAgain} />
       {cigar.sourceUrls?.length ? (
         <View style={{ marginTop: space.xl }}>
           <SectionLabel>Sources</SectionLabel>
@@ -204,7 +262,48 @@ export default function CigarProfile() {
   );
 }
 
+function Action({
+  icon,
+  label,
+  onPress,
+  active,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  active?: boolean;
+}) {
+  return (
+    <Pressable accessibilityRole="button" onPress={onPress} style={styles.action}>
+      <Ionicons name={icon} size={22} color={active ? colors.danger : colors.brass} />
+      <Text style={[type.caption, { fontSize: 12, marginTop: 4 }]} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  actions: { flexDirection: 'row', gap: space.sm, marginBottom: space.lg },
+  action: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: space.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+  },
+  shopChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: space.md,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
   hero: { marginBottom: space.xl },
   heroImg: { width: '100%', aspectRatio: 1.8, borderRadius: radius.lg, marginBottom: space.lg, backgroundColor: colors.surface },
   bigScore: { fontSize: 56, lineHeight: 60, color: colors.brass, fontWeight: '300' },
