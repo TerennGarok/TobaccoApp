@@ -16,6 +16,10 @@ export interface AppSettings {
   tempMax: number;
   ntfyTopic: string;
   lastCatalogSync: string;
+  /** Model for automatic Claude lookups (when an API key is set). */
+  claudeModel: string;
+  /** Web builds only — native keeps the key in secure storage. */
+  webApiKey: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -30,6 +34,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   tempMax: 72,
   ntfyTopic: '',
   lastCatalogSync: '',
+  claudeModel: 'claude-opus-5-5',
+  webApiKey: '',
 };
 
 export async function getSettings(): Promise<AppSettings> {

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Image, Platform, Text, View } from 'react-native';
 import { Button, Card, Screen } from '../components/ui';
 import { getQueueItem } from '../db';
-import { identifier } from '../services/identify';
+import { getIdentifier } from '../services/identify';
 import { isOnline, onQueueChange, submitPhoto } from '../services/queue';
 import { colors, radius, space, type } from '../theme';
 
@@ -45,7 +45,7 @@ export default function Capture() {
     if (result.canceled || !result.assets[0]) return;
     const uri = result.assets[0].uri;
     setPreview(uri);
-    const online = !identifier.needsNetwork || (await isOnline());
+    const online = !(await getIdentifier()).needsNetwork || (await isOnline());
     setPhase(online ? 'searching' : 'queued');
     setQueueId(await submitPhoto(uri));
   };

@@ -74,11 +74,24 @@ browser when Android asks). Friends can install the same APK.
 2. **Humidor sensor** — `hardware/humidor-sensor/README.md`.
 3. Settings in the app: paste the Sheet URL + token, set humidor limits.
 
-## Optional: AI research service (later phases)
+## Claude band lookup
 
-`server/` sends the photo to Claude with web search for richer results (every
-size, review scores, tasting notes) on cigars not yet in the catalog. It costs
-per lookup, so it's off unless `EXPO_PUBLIC_IDENTIFY_URL` is set.
+Two ways, both on the verify screen under **Ask Claude**:
+
+- **Claude app (free with your Claude plan):** tap *Ask the Claude app* — the
+  research prompt goes on your clipboard and the band photo opens in Android's
+  share sheet. Pick Claude, paste, send. When Claude answers, tap Copy on its
+  reply, come back and tap *Paste Claude's answer*: brand, line, every size,
+  flavors (color-coded) and review scores fill in for you to verify.
+- **Automatic (Anthropic API key):** add a key in Settings → *Automatic Claude
+  lookup* and choose a model. Photos the catalog doesn't already match well go
+  straight to Claude (with web search) — no copy/paste. Billed per lookup to
+  your Anthropic API account (separate from a Claude subscription); the key
+  stays in the phone's secure storage.
+
+Whatever you verify is added to your shared catalog, so each cigar only needs
+looking up once. `server/` holds the same lookup as a hosted service, for a
+later phase where the key shouldn't live on each phone.
 
 ## Layout
 

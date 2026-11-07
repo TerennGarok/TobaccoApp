@@ -10,7 +10,7 @@ import { AppState, Platform } from 'react-native';
 import { claimPending, enqueuePhoto, setQueueResult, setQueueStatus } from '../db';
 import { autoBackupIfDue } from './backup';
 import { syncCatalog } from './catalog';
-import { identifier } from './identify';
+import { getIdentifier } from './identify';
 import { persistPhoto } from './photos';
 
 const MAX_ATTEMPTS = 5;
@@ -46,6 +46,7 @@ export async function drain(): Promise<void> {
   if (draining) return;
   const online = await isOnline();
   if (online) void syncCatalog().catch(() => undefined);
+  const identifier = await getIdentifier();
   if (identifier.needsNetwork && !online) return;
   draining = true;
   try {

@@ -118,6 +118,6 @@ export function strengthToBody(s?: Strength): number {
 }
 
 export function formatVitola(v: Vitola): string {
-  const len = Number.isInteger(v.lengthIn) ? `${v.lengthIn}` : v.lengthIn.toFixed(2).replace(/0$/, '');
+  const len = String(Number(v.lengthIn.toFixed(3))); // 6.125 stays 6.125, 5.50 → 5.5
   return `${v.name} · ${len}" × ${v.ringGauge}`;
 }

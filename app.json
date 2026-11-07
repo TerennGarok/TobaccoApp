@@ -47,7 +47,8 @@
       ],
       "expo-notifications",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": false

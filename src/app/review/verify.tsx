@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { AskClaude } from '../../components/AskClaude';
 import { Segmented } from '../../components/Segmented';
 import { SizePicker } from '../../components/SizePicker';
 import { Button, Card, Field, Row, Screen, SectionLabel, StepHeader } from '../../components/ui';
@@ -167,6 +168,14 @@ export default function Verify() {
             <Text style={[type.caption, { marginTop: space.sm }]}>Not in the catalog yet — enter it below and it will be added.</Text>
           ) : null}
         </View>
+      ) : null}
+
+      {!params.cigarId ? (
+        <AskClaude
+          imageUri={item?.imageUri || undefined}
+          bandText={item?.result?.bandText || query.trim() || undefined}
+          onResult={showCandidates}
+        />
       ) : null}
 
       <Field label="Brand" value={brand} onChangeText={setBrand} placeholder="e.g. Padrón" autoCapitalize="words" />

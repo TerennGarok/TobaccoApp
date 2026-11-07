@@ -3,12 +3,16 @@
 //  1. LocalIdentifier (always): reads the band with on-device OCR and matches
 //     the text against the catalog (shared Google Sheet + your journal +
 //     built-in samples). No network, no cost.
-//  2. RemoteIdentifier (optional, for later/paid phases): POSTs the photo to
-//     server/ where Claude reads the band and researches it on the web. Only
-//     used when EXPO_PUBLIC_IDENTIFY_URL is set.
+//  2. ClaudeIdentifier (optional): when an Anthropic API key is saved in
+//     Settings, bands the catalog doesn't know well go to Claude, which reads
+//     the photo and researches it on the web. Billed per lookup.
+//  3. RemoteIdentifier (optional, hosted): same idea via server/, used only
+//     when EXPO_PUBLIC_IDENTIFY_URL is set.
+// The free Claude-app hand-off (copy/paste) lives on the verify screen.
 import type { CigarCandidate, IdentificationResult } from '../lib/types';
 import { normalizeFlavor } from '../data/flavors';
 import { matchCatalog } from '../lib/match';
+import { getApiKey, lookupWithClaude } from './claudeApi';
 import { loadCatalog } from './catalog';
 import { readBandText } from './ocr';
 import { readBase64 } from './photos';
@@ -91,8 +95,25 @@ function sanitize(result: IdentificationResult): IdentificationResult {
   };
 }
 
+/** Catalog first; only call Claude when the local match is weak or has no sizes. */
+class ClaudeIdentifier implements Identifier {
+  readonly name = 'claude';
+  readonly needsNetwork = true;
+  constructor(private fallback: Identifier) {}
+
+  async identify(imageUri: string): Promise<IdentificationResult> {
+    const local = await this.fallback.identify(imageUri);
+    if (local.candidates[0]?.confidence >= 0.8 && local.candidates[0].vitolas.length) return local;
+    return lookupWithClaude(await readBase64(imageUri));
+  }
+}
+
 const local = new LocalIdentifier();
-export const identifier: Identifier = BACKEND_URL ? new RemoteIdentifier(BACKEND_URL, local) : local;
+
+export async function getIdentifier(): Promise<Identifier> {
+  if (await getApiKey()) return new ClaudeIdentifier(local);
+  return BACKEND_URL ? new RemoteIdentifier(BACKEND_URL, local) : local;
+}
 
 /** Search the catalog by typed text — the fallback when OCR isn't available or is wrong. */
 export async function searchCatalog(query: string): Promise<CigarCandidate[]> {

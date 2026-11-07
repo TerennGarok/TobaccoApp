@@ -7,7 +7,7 @@ import { Button, Card, Field, Row, Screen, SectionLabel } from '../components/ui
 import { type AppSettings, DEFAULT_SETTINGS, getSettings, saveSettings } from '../db/settings';
 import { backupToDrive, buildBackup, buildCigarCsv, buildPipeCsv, restoreBackup, shareText, stamp } from '../services/backup';
 import { syncCatalog } from '../services/catalog';
-import { identifier } from '../services/identify';
+import { CLAUDE_MODELS, getApiKey, setApiKey } from '../services/claudeApi';
 import { ocrAvailable } from '../services/ocr';
 import { sheet } from '../services/sheet';
 import { colors, space, type } from '../theme';
@@ -29,8 +29,12 @@ export default function Settings() {
   const [status, setStatus] = useState('');
   const [busy, setBusy] = useState<string>();
 
+  const [hasKey, setHasKey] = useState(false);
+  const [keyDraft, setKeyDraft] = useState('');
+
   useEffect(() => {
     void getSettings().then(setS);
+    void getApiKey().then((k) => setHasKey(!!k));
   }, []);
 
   const set = <K extends keyof AppSettings>(k: K, v: AppSettings[K]) => {
@@ -97,7 +101,49 @@ export default function Settings() {
       <Card>
         <SectionLabel>Band identification</SectionLabel>
         <Row label="On-device band reading" value={ocrAvailable() ? 'Available' : 'Needs the installed app build'} />
-        <Row label="Online research service" value={identifier.name === 'remote' ? 'On' : 'Off (free mode)'} />
+        <Row label="Ask Claude app (free, copy & paste)" value="Always available" />
+        <Row label="Automatic Claude lookup" value={hasKey ? 'On' : 'Off'} />
+      </Card>
+
+      <Card>
+        <SectionLabel>Automatic Claude lookup (optional)</SectionLabel>
+        <Text style={[type.caption, { marginBottom: space.lg }]}>
+          With an Anthropic API key, bands your catalog doesn&apos;t already know are sent to Claude, which reads the photo and
+          searches the web for every size, tasting notes and reviews. This is billed per lookup to an Anthropic API account
+          (console.anthropic.com) — separate from a Claude subscription. The key is stored in your phone&apos;s secure storage.
+        </Text>
+        {hasKey ? (
+          <Row label="API key" value="Saved ✓" />
+        ) : (
+          <Field label="Anthropic API key" value={keyDraft} onChangeText={setKeyDraft} autoCapitalize="none" secureTextEntry placeholder="sk-ant-…" />
+        )}
+        <SectionLabel>Model</SectionLabel>
+        <Segmented
+          options={CLAUDE_MODELS.map((m) => ({ value: m.id, label: m.label }))}
+          value={(s.claudeModel || 'claude-opus-5-5') as (typeof CLAUDE_MODELS)[number]['id']}
+          onChange={(v) => set('claudeModel', v)}
+        />
+        <Text style={[type.caption, { marginTop: -space.sm, marginBottom: space.md }]}>
+          {CLAUDE_MODELS.find((m) => m.id === (s.claudeModel || 'claude-opus-5-5'))?.note}
+        </Text>
+        {hasKey ? (
+          <Button
+            title="Remove key"
+            variant="ghost"
+            onPress={() => void setApiKey(null).then(() => setHasKey(false))}
+          />
+        ) : (
+          <Button
+            title="Save key"
+            disabled={!keyDraft.trim().startsWith('sk-')}
+            onPress={() =>
+              void setApiKey(keyDraft).then(() => {
+                setKeyDraft('');
+                setHasKey(true);
+              })
+            }
+          />
+        )}
       </Card>
 
       <Card>
